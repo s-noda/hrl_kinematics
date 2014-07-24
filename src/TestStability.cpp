@@ -39,7 +39,7 @@ using boost::shared_ptr;
 namespace hrl_kinematics {
 
 TestStability::TestStability()
-: Kinematics(), rfoot_mesh_link_name("RAnkleRoll_link")
+: Kinematics(), rfoot_mesh_link_name("RLEG_LINK5"), lfoot_mesh_link_name("LLEG_LINK5")
 {
   //Build support polygon with default scale 1.0
   initFootPolygon(1.0);
@@ -216,28 +216,37 @@ void TestStability::initFootPolygon(double scale_convex_hull){
   scale_convex_hull_ = scale_convex_hull;
 
   // TODO: param?
-  if (!loadFootPolygon()){
-    ROS_WARN("Could not load foot mesh, using default points");
+  if (!loadFootPolygon(rfoot_mesh_link_name)){
+    ROS_WARN("Could not load rfoot mesh, using default points");
 
     foot_support_polygon_right_.push_back(tf::Point(0.07f, 0.023f, 0.0));
     foot_support_polygon_right_.push_back(tf::Point(0.07f, -0.03f, 0.0));
     foot_support_polygon_right_.push_back(tf::Point(-0.03f, -0.03f, 0.0));
     foot_support_polygon_right_.push_back(tf::Point(-0.03f, 0.02, 0.0));
   }
+  std::vector<tf::Point> buf = foot_support_polygon_right_ ;
+  if (!loadFootPolygon(lfoot_mesh_link_name)){
+    ROS_WARN("Could not load lfoot mesh, using default points");
 
-  // mirror for left:
-  foot_support_polygon_left_ = foot_support_polygon_right_;
-  for (unsigned i=0; i < foot_support_polygon_left_.size(); ++i){
-    foot_support_polygon_left_[i] *= tf::Point(1.0, -1.0, 1.0);
+    foot_support_polygon_left_ = foot_support_polygon_right_;
+    for (unsigned i=0; i < foot_support_polygon_left_.size(); ++i){
+      foot_support_polygon_left_[i] *= tf::Point(1.0, -1.0, 1.0);
+    }
+    // restore order of polygon
+    foot_support_polygon_left_ = convexHull(foot_support_polygon_left_);
+  } else {
+    foot_support_polygon_left_ = foot_support_polygon_right_ ;
   }
-
-  // restore order of polygon
-  foot_support_polygon_left_ = convexHull(foot_support_polygon_left_);
+  foot_support_polygon_right_ = buf ;
 }
 
 
-bool TestStability::loadFootPolygon(){
-  boost::shared_ptr<const urdf::Link> foot_link =  urdf_model_.getLink(rfoot_mesh_link_name);
+// bool TestStability::loadFootPolygon(){
+//   return loadFootPolygon(rfoot_mesh_link_name) ;
+// }
+
+bool TestStability::loadFootPolygon(std::string foot_mesh_link_name){
+  boost::shared_ptr<const urdf::Link> foot_link =  urdf_model_.getLink(foot_mesh_link_name);
   assert(foot_link);
   boost::shared_ptr<const urdf::Geometry> geom;
   urdf::Pose geom_pose;
@@ -248,7 +257,7 @@ bool TestStability::loadFootPolygon(){
     geom = foot_link->visual->geometry;
     geom_pose = foot_link->visual->origin;
   } else{
-    ROS_ERROR_STREAM("No geometry for link "<< rfoot_mesh_link_name << " available");
+    ROS_ERROR_STREAM("No geometry for link "<< foot_mesh_link_name << " available");
     return false;
   }
 
@@ -256,7 +265,7 @@ bool TestStability::loadFootPolygon(){
                                               tf::Vector3(geom_pose.position.x, geom_pose.position.y, geom_pose.position.z)));
 
   if (geom->type != urdf::Geometry::MESH){
-    ROS_ERROR_STREAM("Geometry for link "<< rfoot_mesh_link_name << " is not a mesh");
+    ROS_ERROR_STREAM("Geometry for link "<< foot_mesh_link_name << " is not a mesh");
     return false;
   } else {
     shared_ptr<const urdf::Mesh> mesh = boost::dynamic_pointer_cast<const urdf::Mesh>(geom);

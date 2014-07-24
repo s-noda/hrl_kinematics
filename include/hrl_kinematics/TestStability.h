@@ -85,7 +85,7 @@ public:
 
 protected:
   void initFootPolygon(double scale=1.0);
-  bool loadFootPolygon();
+  bool loadFootPolygon(std::string foot_mesh_link_name);
   std::vector<tf::Point> convexHull(const std::vector<tf::Point>& points) const;
   /// tests if point is in polygon in 2D. point and polygon will be projected down to z=0 (z values will be ignored)
   bool pointInConvexHull(const tf::Point& point, const std::vector<tf::Point>& polygon) const;
@@ -97,7 +97,7 @@ protected:
   tf::Point p_com_;
   std::vector<tf::Point> support_polygon_;
   tf::Transform tf_to_support_;
-  std::string rfoot_mesh_link_name;
+  std::string rfoot_mesh_link_name, lfoot_mesh_link_name;
 
   //Convex Hull scaling factor
   double scale_convex_hull_;
